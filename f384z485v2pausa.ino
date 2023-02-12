@@ -6,6 +6,8 @@
 #include <AccelStepper.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <millisDelay.h>
+
 
 byte MAC_ADDRESS[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress IP(192, 168, 0, 100);
@@ -88,9 +90,10 @@ const char CMD_OK = 0x05;
 const char CMD_KO = 0x06;
 int CARRO_NX = 0;
 int TIEMPO_PLUS_CORREA = 2000; // tiempo extra cinta trasportadora
-int period = 1000;
-unsigned long time_now = 0;
+unsigned long previousMillis = 0;
+const long interval = 5000;
 
+millisDelay delayCORREA;
 void setup()
 {
   CONFIG();   
@@ -136,11 +139,14 @@ void loop() {
  if (SEN_VCC == 0){
    SECUENCIA_ON = 1;
    ARRANCA_SELLADORA();
+  
+
  }
    else
    {
     if(SECUENCIA_ON == 1){
         ARRANCA_SELLADORA();
+
        // Serial.println(SECUENCIA_ON);
     }
     }
@@ -148,6 +154,7 @@ void loop() {
  
  if (BUFF_N > BUFF_LEN) {
         Controllino_RS485TxEnable();
+      
 
      if (BUFF_READ[0] == STX) {      
        if (BUFF_READ[5] == ETX && BUFF_READ[6] == Checksums(BUFF_READ, BUFF_LEN + 1, 1)) {
@@ -489,32 +496,29 @@ void DTA_Button()
 }
 
 
+
+
 void CORREA_salida()
-{ // subrutina correa combeyor
-  SEN_CONVEYOR = READ_PIN(CONVEYOR_SEN_PIN);
-  // SEN_VCC = READ_PIN(VCC_SEN);
-  if (SEN_CONVEYOR == 0)
-  {
-   digitalWrite(CONVEYOR_PIN, 0);
-    // Serial.println("sale a 0");
-  }
-  else
-  {
-    digitalWrite(CONVEYOR_PIN, 1);
-    // Serial.println("sale a 1");
-    //delay(TIEMPO_PLUS_CORREA);
+{
+SEN_CONVEYOR = READ_PIN(CONVEYOR_SEN_PIN);
 
-
-    //digitalWrite(CONVEYOR_PIN, 1);
-   
-      
-
- 
-    COUNT_DPS = (byte)(COUNT_DPS + 1);
-    COUNT_DPS = (byte)(COUNT_DPS & 0xff);
-    //delay(50);
-  }
+if (SEN_CONVEYOR == 1) {
+digitalWrite(CONVEYOR_PIN, 1);
+previousMillis = millis();
+} else {
+unsigned long currentMillis = millis();
+if (currentMillis - previousMillis < interval) {
+digitalWrite(CONVEYOR_PIN, 1);
+} else {
+digitalWrite(CONVEYOR_PIN, 0);
 }
+}
+}
+
+
+
+
+
 
 void Paro_Emg_cartesianos()//subrutina paro emergencia Cartesianos
 { 
